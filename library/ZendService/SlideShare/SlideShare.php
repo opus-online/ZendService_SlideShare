@@ -171,21 +171,21 @@ class SlideShare
 
         if (!($this->cacheobject instanceof CacheStorage)) {
             $cache = CacheFactory::factory(array(
-                'adapter' => array(
-                    'name' => 'filesystem',
-                    'options' => array(
-                        'ttl' => 43200,
-                    )
-                ),
-                'plugins' => array(
-                    array(
-                        'name'    => 'serializer',
+                    'adapter' => array(
+                        'name' => 'filesystem',
                         'options' => array(
-                            'serializer' => 'php_serialize',
-                        ),
-                    )
-                ),
-            ));
+                            'ttl' => 43200,
+                        )
+                    ),
+                    'plugins' => array(
+                        array(
+                            'name'    => 'serializer',
+                            'options' => array(
+                                'serializer' => 'php_serialize',
+                            ),
+                        )
+                    ),
+                ));
 
             $this->setCacheObject($cache);
         }
@@ -570,7 +570,7 @@ class SlideShare
      * @throws Exception
      * @return array An array of SlideShow objects
      */
-    public function searchSlideShows($query)
+    public function searchSlideShows($query, $options=array())
     {
         $timestamp = time();
 
@@ -582,9 +582,10 @@ class SlideShare
             'detailed'  => 1,
         );
 
+        $params = array_merge($params, $options);
         $cache = $this->getCacheObject();
 
-        $cache_key = md5('__zendslideshare_cache_search_' . $query);
+        $cache_key = md5('__zendslideshare_cache_search_' . $query . md5(serialize($params)));
 
         if (!$retval = $cache->getItem($cache_key)) {
 
@@ -595,6 +596,8 @@ class SlideShare
             $request->getPost()->fromArray($params);
             $request->setMethod(HttpRequest::METHOD_POST);
             $httpClient->setEncType(HttpClient::ENC_URLENCODED);
+            $httpClient->setRequest($request);
+            $httpClient->setOptions(array('sslverifypeer'=>false));
 
             try {
                 $response = $httpClient->send();
